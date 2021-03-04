@@ -10,7 +10,7 @@ struct Hook {
 };
 
 namespace Hooks {
-    std::vector<Hook> hooks;
+    inline std::vector<Hook> hooks;
     void init();
     void addHook(Hook hook);
     void unload();

@@ -1,25 +1,25 @@
 #include "includes.h"
-// #include "hook_utils.hpp"
+#include "hook_utils.hpp"
+#include "utils.hpp"
 
-inline int(__thiscall* pl_init)(CCLayer* self);
-int __fastcall pl_initHook(CCLayer* self, void*) {
-    auto ret = pl_init(self);
+inline int(__thiscall* MenuLayer_init)(CCLayer* self);
+int __fastcall MenuLayer_initHook(CCLayer* self, void*) {
+    auto ret = MenuLayer_init(self);
 
-    auto label = CCLabelBMFont::create("Hello from cmake generated dll", "bigFont.fnt");
-    label->setPosition({ 100, 100 });
+    auto label = CCLabelBMFont::create("Hello World", "bigFont.fnt");
+    label->setPosition({ 200, 100 });
+    label->setScale(0.5f);
+
     self->addChild(label);
 
     return ret;
 }
 
 DWORD WINAPI myThread(void* hModule) {
-    //Hooks::init();
-    MH_Initialize();
-    auto base = reinterpret_cast<uintptr_t>(GetModuleHandle(0));
-    //Hooks::addHook({ base + 0x1907b0, pl_initHook, pl_init });
-    MH_CreateHook((void*)(base + 0x1907b0), pl_initHook, (void**)(&pl_init));
+    Hooks::init();
+    auto base = cast<uintptr_t>(GetModuleHandle(0));
+    Hooks::addHook({ base + 0x1907b0, MenuLayer_initHook, &MenuLayer_init });
 
-    MH_EnableHook(MH_ALL_HOOKS);
     return 0;
 }
 
@@ -30,6 +30,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
         case DLL_THREAD_ATTACH:
         case DLL_THREAD_DETACH:
         case DLL_PROCESS_DETACH:
+            Hooks::unload();
             break;
     }
     return TRUE;

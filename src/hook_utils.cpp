@@ -6,7 +6,7 @@ void Hooks::init() {
 
 void Hooks::addHook(Hook hook) {
     auto target = reinterpret_cast<void*>(hook.address);
-    MH_CreateHook(target, hook.hook, reinterpret_cast<void**>(&hook.detour));
+    MH_CreateHook(target, hook.hook, reinterpret_cast<void**>(hook.detour));
     MH_EnableHook(target);
     hooks.push_back(hook);
 }
