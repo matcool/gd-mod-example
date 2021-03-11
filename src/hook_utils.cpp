@@ -12,8 +12,5 @@ void Hooks::addHook(Hook hook) {
 }
 
 void Hooks::unload() {
-    for (auto& hook : hooks) {
-        MH_RemoveHook(reinterpret_cast<void*>(hook.address));
-    }
     MH_Uninitialize();
 }

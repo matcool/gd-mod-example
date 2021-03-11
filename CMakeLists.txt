@@ -10,22 +10,31 @@ if(NOT WINDOWS_HEADER)
   message(FATAL_ERROR "Can't find windows.h!")
 endif()
 
-file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
+file(
+  GLOB_RECURSE SOURCE_FILES
+  src/*.cpp
+  # nice
+  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/custom/Sprites/CCMenuItemSpriteExtra/CCMenuItemSpriteExtra.cpp
+)
 add_library(template-project SHARED ${SOURCE_FILES})
 
 target_include_directories(template-project PRIVATE
   libraries/minhook/include
   libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/win32
   libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/include
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/third_party/win32/OGLES
   libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/kazmath/include
+  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/win32
+  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/third_party/win32
+  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/third_party/win32/OGLES
+  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/extensions
 )
 
 add_subdirectory(libraries/minhook)
 target_link_libraries(template-project minhook)
 
 target_link_libraries(template-project ${CMAKE_SOURCE_DIR}/libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/lib/cappuccino.lib)
+# most of the time you dont need this
+target_link_libraries(template-project ${CMAKE_SOURCE_DIR}/libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/lib/libExtensions.lib)
 
 set_target_properties(template-project PROPERTIES PREFIX "")
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
