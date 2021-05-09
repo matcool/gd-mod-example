@@ -1,5 +1,9 @@
 # gd-mod-example
 Basic Geometry Dash mod example meant for beginners, or as a template for people who want to use CMake + MinHook + gd.h + cocos2d.
+<p align="center">
+<img src="https://user-images.githubusercontent.com/26722564/117589440-d7498200-b0ff-11eb-8662-e3f0854a5420.png" alt="screenshot" width="48%">
+<img src="https://user-images.githubusercontent.com/26722564/117589450-f1836000-b0ff-11eb-8a94-2e7ce4df48c2.png" alt="screenshot" width="48%">
+</p>
 
 ## Usage
 
