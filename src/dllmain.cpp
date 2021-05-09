@@ -124,6 +124,14 @@ DWORD WINAPI thread_func(void* hModule) {
       and what function to hook it to, as well as a trampoline, which is used to call the
       original function without going through our hook.
 
+      Hooking is quite a complex process and can be confusing to beginners, so if you
+      want a more detailed explanation you can watch this video by Guided Hacking
+      https://www.youtube.com/watch?v=jTl3MFVKSUM (in the video he makes his own
+      hook method, however here we just use MinHook as its a lot simpler to use
+      and does the dissassembly part for us).
+      To give a basic explanation: hooking a function means overwriting its first few
+      instructions, making it redirect code execution to our own function.
+
       Hooking the init function of a node (in this case a layer) is a common practice as
       that is where you should initialize the elements in the node, and in a hook, you
       can add your own nodes.
