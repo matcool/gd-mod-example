@@ -16,6 +16,8 @@ set(PROJECT_NAME template-project) # change this
 
 To build this project you'll need CMake, which you can download [here](https://cmake.org/download/), and a C++ compiler, such as MSVC, which you can get with Visual Studio
 
+**Make sure you're building in 32 bit mode**, as gd (atleast the windows version) is 32 bit, meaning your dll has to be too.
+
 All the source files contain a lot of comments which you should definitely read if you're just starting out :) (i recommend starting from [dllmain.cpp](https://github.com/matcool/gd-mod-example/blob/master/src/dllmain.cpp))
 
 ## Resources
