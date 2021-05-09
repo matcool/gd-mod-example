@@ -3,39 +3,32 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-project(template-project VERSION 1.0.0)
+set(PROJECT_NAME template-project)
+project(${PROJECT_NAME})
 
 find_file(WINDOWS_HEADER windows.h)
 if(NOT WINDOWS_HEADER)
   message(FATAL_ERROR "Can't find windows.h!")
 endif()
 
-file(
-  GLOB_RECURSE SOURCE_FILES
-  src/*.cpp
-  # nice
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/custom/Sprites/CCMenuItemSpriteExtra/CCMenuItemSpriteExtra.cpp
-)
-add_library(template-project SHARED ${SOURCE_FILES})
+file(GLOB_RECURSE SOURCE_FILES src/*.cpp)
+add_library(${PROJECT_NAME} SHARED ${SOURCE_FILES})
 
-target_include_directories(template-project PRIVATE
+target_include_directories(${PROJECT_NAME} PRIVATE
   libraries/minhook/include
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/include
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/kazmath/include
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/win32
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/third_party/win32
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/cocos2dx/platform/third_party/win32/OGLES
-  libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/incl/extensions
+  libraries/gd.h/include
+  libraries/gd.h/
+  libraries/cocos-headers/cocos2dx/
+  libraries/cocos-headers/cocos2dx/include
+  libraries/cocos-headers/cocos2dx/kazmath/include
+  libraries/cocos-headers/cocos2dx/platform/win32
+  libraries/cocos-headers/cocos2dx/platform/third_party/win32
+  libraries/cocos-headers/cocos2dx/platform/third_party/win32/OGLES
 )
 
 add_subdirectory(libraries/minhook)
-target_link_libraries(template-project minhook)
+target_link_libraries(${PROJECT_NAME} minhook)
 
-target_link_libraries(template-project ${CMAKE_SOURCE_DIR}/libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/lib/cappuccino.lib)
-# most of the time you dont need this
-target_link_libraries(template-project ${CMAKE_SOURCE_DIR}/libraries/cappuccino-sdk/template/default-cpp/cappuccino-sdk/lib/libExtensions.lib)
-
-set_target_properties(template-project PROPERTIES PREFIX "")
-set(CPACK_PROJECT_NAME ${PROJECT_NAME})
-set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
+target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libraries/cocos-headers/cocos2dx/libcocos2d.lib)
+# not needed most of the time
+target_link_libraries(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libraries/cocos-headers/extensions/libExtensions.lib)

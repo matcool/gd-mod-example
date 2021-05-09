@@ -1,6 +1,9 @@
-[submodule "libraries/cappuccino-sdk"]
-	path = libraries/cappuccino-sdk
-	url = https://github.com/AndreNIH/CappuccinoSDK.git
 [submodule "libraries/minhook"]
 	path = libraries/minhook
 	url = https://github.com/TsudaKageyu/minhook.git
+[submodule "libraries/cocos-headers"]
+	path = libraries/cocos-headers
+	url = https://github.com/HJfod/cocos-headers
+[submodule "libraries/gd.h"]
+	path = libraries/gd.h
+	url = https://github.com/poweredbypie/gd.h
