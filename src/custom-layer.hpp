@@ -7,7 +7,7 @@
   #pragma once
   However, cos8o will be really sad if you do :c
   (the actual reason for this is that its not supported on
-  some compilers, i think, but it work fine on MSVC)
+  some compilers, i think, but it works fine on MSVC)
 */
 #ifndef __CUSTOM_LAYER_HPP
 #define __CUSTOM_LAYER_HPP
@@ -19,6 +19,7 @@ class CustomLayer : public CCLayer {
 protected:
     virtual bool init();
     virtual void keyBackClicked();
+    void backButtonCallback(CCObject*);
 public:
     static CustomLayer* create();
 

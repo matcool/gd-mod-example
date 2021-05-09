@@ -1,5 +1,4 @@
 #include "includes.h"
-#include "utils.hpp"
 #include "custom-layer.hpp"
 
 /*
@@ -9,7 +8,7 @@
   is __thiscall, since its a class method, however, c++ doesn't let you
   use __thiscall outside classes and function types, so we have to approximate
   it using __fastcall, which can be done by having `this` be the first
-  argument and between actual arguments, an unused arg which is the `ecx`
+  argument and between actual arguments, an unused arg which is the `edx`
   register. so for example
   
     PlayLayer::init(GJGameLevel*)
@@ -19,11 +18,11 @@
     PlayLayer_init_H(PlayLayer*, void*, GJGameLevel*)
   
   If the function doesn't have any arguments (which is the case here),
-  the `void*` for the ecx register is not needed, however i still left it in
-  for the explanation
+  the `void*` for the edx register is not needed, however i still left it in
+  here for the explanation
   
   PS: not every function is a __thiscall, for example, if they're static
-  they will be __fastcall, which is much easier to deal with, or sometimes,
+  they can be __fastcall, which is much easier to deal with, or sometimes,
   they get really optimized and floats go into xmm registers, and in that
   case you have to do some asm to call/hook the function properly :(
   
@@ -42,7 +41,7 @@ bool __fastcall MenuLayer_init_H(CCLayer* self, void*) {
     if (!MenuLayer_init(self)) return false;
 
     /*
-      Note that we're using the one without the -uhd and -hd suffix, that is
+      Note that we're using the one without the -uhd and -hd suffix; which is
       because gd deals with selecting the right resolution texture for us.
       Note that this texture is also its own file in the gd Resources/ folder,
       meaning you access it via CCSprite::create
@@ -118,7 +117,7 @@ DWORD WINAPI thread_func(void* hModule) {
       cross-platform, however i think it looks neat and it makes it easy to tell if
       something is an address.
     */
-    auto base = cast<uintptr_t>(GetModuleHandle(0));
+    auto base = reinterpret_cast<uintptr_t>(GetModuleHandle(0));
     
     /*
       Here we are hooking MenuLayer::init, by giving the starting address of the function
@@ -128,11 +127,12 @@ DWORD WINAPI thread_func(void* hModule) {
       Hooking the init function of a node (in this case a layer) is a common practice as
       that is where you should initialize the elements in the node, and in a hook, you
       can add your own nodes.
-
-      PS: createHook() is my own func (defined in utils.hpp), which is an easier way of
-      calling MH_CreateHook, since it requires everything to be void*
     */
-    createHook(base + 0x1907b0, MenuLayer_init_H, &MenuLayer_init);
+    MH_CreateHook(
+        reinterpret_cast<void*>(base + 0x1907b0),
+        MenuLayer_init_H,
+        reinterpret_cast<void**>(&MenuLayer_init) // note the &, this gets the address of the variable
+    );
 
     // enable all hooks you've created with minhook
     MH_EnableHook(MH_ALL_HOOKS);
