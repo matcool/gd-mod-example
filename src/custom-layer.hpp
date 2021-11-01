@@ -1,16 +1,4 @@
-/*
-  You'll see these a lot, they're called include guards, they
-  basically make sure your code won't be included multiple times,
-  causing weird compile errors
-  
-  You can also just use:
-  #pragma once
-  However, cos8o will be really sad if you do :c
-  (the actual reason for this is that its not supported on
-  some compilers, i think, but it works fine on MSVC)
-*/
-#ifndef __CUSTOM_LAYER_HPP
-#define __CUSTOM_LAYER_HPP
+#pragma once
 
 #include "includes.h"
 
@@ -28,5 +16,3 @@ public:
 };
 
 // continue reading on `custom-layer.cpp`
-
-#endif

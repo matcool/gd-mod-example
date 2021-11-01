@@ -138,7 +138,7 @@ DWORD WINAPI thread_func(void* hModule) {
     */
     MH_CreateHook(
         reinterpret_cast<void*>(base + 0x1907b0),
-        MenuLayer_init_H,
+        reinterpret_cast<void*>(&MenuLayer_init_H),
         reinterpret_cast<void**>(&MenuLayer_init) // note the &, this gets the address of the variable
     );
 
@@ -154,7 +154,11 @@ in pretty much every mod, and is just winapi boilerplate
 */
 BOOL APIENTRY DllMain(HMODULE handle, DWORD reason, LPVOID reserved) {
     if (reason == DLL_PROCESS_ATTACH) {
-        CreateThread(0, 0x100, thread_func, handle, 0, 0);
+        auto h = CreateThread(0, 0, thread_func, handle, 0, 0);
+        if (h)
+            CloseHandle(h);
+        else
+            return FALSE;
     }
     return TRUE;
 }
