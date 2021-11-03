@@ -216,7 +216,7 @@ target_link_libraries(my-project cocos2d minhook)
 # ...
 ```
 
-Using MinHook consists of mostly three parts: initializing it, creating the hooks and then enabling them. You should initialize minhook before doing anything, and only once throughout the entire program.
+Using MinHook consists of mostly three parts: initializing it, creating the hooks and then enabling them. You should initialize minhook before doing anything with it, but also only once throughout the entire program.
 
 ```cpp
 #include <MinHook.h>
@@ -227,7 +227,7 @@ DWORD WINAPI myThread(void*) {
     // ...
 }
 ```
-> Most MinHook functions return a `MH_STATUS` enum, which if you want to you can check this way
+> Most MinHook functions return a `MH_STATUS` enum, which is used for error checking. To see if anything went wrong just check it's not `MH_OK`
 > ```cpp
 > auto status = MH_Initialize();
 > if (status != MH_OK) {
@@ -284,13 +284,13 @@ Note that the hook and the original signature must match the target function, in
 Before we get to hooking gd functions, we must understand calling conventions.
 
 > In computer science, a calling convention is an implementation-level (low-level) scheme for how subroutines receive parameters from their caller and how they return a result. \
-> From: https://en.wikipedia.org/wiki/Calling_convention
+> *From: https://en.wikipedia.org/wiki/Calling_convention*
 
-Basically it's how, at the low level, functions receive arguments. This is usually something you don't worry about in your own code, but it's important to know when interfacing with external code, such as code in an already compiled executable in gd.
+Basically it's how, at the low level, functions receive arguments. This is usually something you don't worry about in your own code, but it's important to know when interfacing with external code, such as code in an already compiled executable, such as Geometry Dash.
 
-This is only something you have to deal with on Windows gd, as it's compiled to 32 bit (x86), other platforms such as macOS (x86_64 System V ABI), Android (ARM32) and iOS (ARM64) all have a single and well defined calling convention, while x86 has many calling conventions (See [https://en.wikipedia.org/wiki/X86_calling_conventions](https://en.wikipedia.org/wiki/X86_calling_conventions)).
+This is only something you have to deal with on Windows gd, as it's compiled to 32 bit (x86). Other versions of the game such as macOS (x86_64 System V ABI), Android (ARM32) and iOS (ARM64) all have a single and well defined calling convention, while x86 has many calling conventions (See [https://en.wikipedia.org/wiki/X86_calling_conventions](https://en.wikipedia.org/wiki/X86_calling_conventions)).
 
-Since gd functions aren't meant to be called externally, the compiler is free to optimize them. The optimized calling convention used by MSVC is an undocumented calling convention based off their [x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention), similar to vectorcall, and for this reason many call it `optcall`. There are exceptions to this, mostly virtual methods, and also methods passed in to cocos2d, such as selectors, which are always `thiscall`.
+Since gd functions aren't meant to be called externally, the compiler is free to optimize them. The optimized calling convention used by MSVC is an undocumented calling convention based off of their [x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention), similar to vectorcall, and for this reason many call it `optcall`. There are exceptions to this, mostly virtual methods, and also methods passed in to cocos2d, such as selectors, which are always `thiscall`.
 
 To explain it in short: ECX and EDX are used for the 1st and 2nd argument if they are less than or equal to 4 bytes in size, the rest of the arguments go into the stack from right to left. This is the same as fastcall, except for floats (? and doubles?) which go into the XMM0 through XMM3 registers depending on their argument index
 
@@ -324,7 +324,7 @@ bool __thiscall PlayLayer_init(PlayLayer* this, GJGameLevel* level) {
     // ...
 }
 ```
-However there are two issues with using this as a hook method: Using `this` as a variable name since its a C++ keyword, but also using `__thiscall`. This is only an issue in MSVC, Clang lets you use `__thiscall` anywhere. A workaround for this is to emulate it using the fastcall calling convention, since it's similar to thiscall but uses the EDX register for the second argument.
+However there are two issues with using this as a hook function: Using `this` as a variable name since its a C++ keyword, but also using `__thiscall`. The latter only an issue in MSVC, Clang lets you use `__thiscall` anywhere. A workaround for this is to emulate it using the fastcall calling convention, since it's similar to thiscall but uses the EDX register for the second argument.
 
 ```cpp
 // This only works on clang, due to msvc being a bitch about it
@@ -366,7 +366,8 @@ struct Hooks {
 
 ---
 
-Now, time to hook one of gd's functions, for this example lets choose `void MenuLayer::onMoreGames(cocos2d::CCObject*)`. Not only does this function not contain any float arguments, but it's also a cocos2d selector, meaning we don't have to deal with optcall shenanigans. \
+Now, time to hook one of gd's functions, for this example let's choose `void MenuLayer::onMoreGames(cocos2d::CCObject*)`. Not only does this function not contain any float arguments, but it's also a cocos2d selector, meaning we don't have to deal with optcall shenanigans.
+
 As shown before, with the way MinHook works you must also save a pointer to the [trampoline](https://en.wikipedia.org/wiki/Trampoline_%28computing%29) function. For these you must also deal with the calling convention, but they can be set to `__thiscall` on either compiler.
 
 ```cpp
