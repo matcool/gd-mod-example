@@ -1,9 +1,14 @@
 # Tutorial
 
+*(if you notice any mistakes in this document feel free to let me know)*
+
 This assumes you have at least some knowledge of C++. **You should not jump into GD Modding with little to no c++ or programming knowledge**. that is dumb bad idea.
 You can follow online tutorials such as [learncpp](https://www.learncpp.com/) and others easily found on google on how to learn C++
 
-Also note this entire tutorial focuses on modding the game with C++ (mostly focusing on the Windows version, too), however, theoretically any language can be used, but specially those that can compile into native binaries and interact with low level mechanics, such as C, Rust, Zig or even straight up ASM.
+This tutorial also makes use of CMake, which will be helpful to know about \
+See https://cmake.org/cmake/help/latest/guide/tutorial/index.html for a tutorial
+
+Note that this entire tutorial focuses on modding the game with C++ (mostly focusing on the Windows version, too), however, theoretically any language can be used, but specially those that can compile into native binaries and interact with low level mechanics, such as C, Rust, Zig or even straight up ASM.
 
 - [How do mods work](#how-do-mods-work)
     - [Mods in the future](#mods-in-the-future)
@@ -12,6 +17,7 @@ Also note this entire tutorial focuses on modding the game with C++ (mostly focu
 - [Setting up libraries](#setting-up-libraries)
 - [Creating a hook](#creating-a-hook)
     - [Calling conventions](#calling-conventions)
+    - [Calling conventions in practice](#calling-conventions-in-practice)
 - [Your first Cocos2d-x layer]()
 - [Working with the gd classes]()
 - [Understanding assembly]()
@@ -87,22 +93,18 @@ add_library(my-project SHARED main.cpp)
 ```
 The `main.cpp` in the add_library call is the source file, which you should also create
 
-See https://cmake.org/cmake/help/latest/guide/tutorial/index.html for a more detailed introduction to CMake, it is useful to understand what you're doing when using CMake
-
-### Note for Clang
-
-Clang defaults to 64 bit, so to change it you must add a compiler option
-```cmake
-if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
-  # ensure 32 bit on clang
-  set(CMAKE_SIZEOF_VOID_P 4)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target i386-pc-windows-msvc")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target i386-pc-windows-msvc")
-  add_definitions("--target=i386-pc-windows-msvc")
-endif()
-```
-
----
+> ### Note for Clang
+> 
+> Clang defaults to 64 bit, so to change it you must add a compiler option
+> ```cmake
+> if (${CMAKE_CXX_COMPILER_ID} STREQUAL Clang)
+>   # ensure 32 bit on clang
+>   set(CMAKE_SIZEOF_VOID_P 4)
+>   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -target i386-pc-windows-msvc")
+>   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -target i386-pc-windows-msvc")
+>   add_definitions("--target=i386-pc-windows-msvc")
+> endif()
+> ```
 
 Whenever dlls get loaded, their [DllMain](https://docs.microsoft.com/en-us/windows/win32/dlls/dllmain) entrypoint is called, so here we use it to create another thread to execute our code in, as [many functions are considered unsafe](https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-best-practices) to run in DllMain.
 
@@ -113,6 +115,8 @@ See [https://docs.microsoft.com/en-us/windows/win32/dlls/dllmain](https://docs.m
 
 DWORD WINAPI myThread(void* instance) {
     MessageBoxA(NULL, "Hello, world", "An interesting title", MB_OK);
+
+    return 0;
 }
 
 BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID) {
@@ -169,6 +173,8 @@ Now in our `main.cpp` code we can do
 
 DWORD WINAPI myThread(void*) {
     cocos2d::CCDirector::sharedDirector()->setTimeScale(0.5f);
+
+    return 0;
 }
 
 // ...
@@ -273,4 +279,122 @@ Note that the hook and the original signature must match the target function, in
 > gah
 > ```
 
-## Calling Conventions
+## Calling conventions
+
+Before we get to hooking gd functions, we must understand calling conventions.
+
+> In computer science, a calling convention is an implementation-level (low-level) scheme for how subroutines receive parameters from their caller and how they return a result. \
+> From: https://en.wikipedia.org/wiki/Calling_convention
+
+Basically it's how, at the low level, functions receive arguments. This is usually something you don't worry about in your own code, but it's important to know when interfacing with external code, such as code in an already compiled executable in gd.
+
+This is only something you have to deal with on Windows gd, as it's compiled to 32 bit (x86), other platforms such as macOS (x86_64 System V ABI), Android (ARM32) and iOS (ARM64) all have a single and well defined calling convention, while x86 has many calling conventions (See [https://en.wikipedia.org/wiki/X86_calling_conventions](https://en.wikipedia.org/wiki/X86_calling_conventions)).
+
+Since gd functions aren't meant to be called externally, the compiler is free to optimize them. The optimized calling convention used by MSVC is an undocumented calling convention based off their [x64 calling convention](https://en.wikipedia.org/wiki/X86_calling_conventions#Microsoft_x64_calling_convention), similar to vectorcall, and for this reason many call it `optcall`. There are exceptions to this, mostly virtual methods, and also methods passed in to cocos2d, such as selectors, which are always `thiscall`.
+
+To explain it in short: ECX and EDX are used for the 1st and 2nd argument if they are less than or equal to 4 bytes in size, the rest of the arguments go into the stack from right to left. This is the same as fastcall, except for floats (? and doubles?) which go into the XMM0 through XMM3 registers depending on their argument index
+
+### optcall
+| index | location | location if float |
+|-|-|-|
+| 0 | ECX or stack | XMM0 |
+| 1 | EDX or stack | XMM1 |
+| 2 | stack | XMM2 |
+| 3 | stack | XMM3 |
+| >=4 | stack | stack |
+
+There is also a variation of this calling convention which is used for member functions that skips the EDX register, which is sometimes called `membercall`
+
+### membercall
+| index | location | location if float |
+|-|-|-|
+| 0 (this) | ECX |  |
+| 1 | stack | XMM1 |
+| 2 | stack | XMM2 |
+| 3 | stack | XMM3 |
+| >=4 | stack | stack |
+
+## Calling conventions in practice
+
+In practice, most functions you deal with in hooking are interchangeable with `thiscall`, which is when they are member functions and don't have any floating point arguments, or the exceptions mentioned previously
+
+Take for example `bool PlayLayer::init(GJGameLevel*)`. It's a member function with no float arguments, meaning it can be expressed as
+```cpp
+bool __thiscall PlayLayer_init(PlayLayer* this, GJGameLevel* level) {
+    // ...
+}
+```
+However there are two issues with using this as a hook method: Using `this` as a variable name since its a C++ keyword, but also using `__thiscall`. This is only an issue in MSVC, Clang lets you use `__thiscall` anywhere. A workaround for this is to emulate it using the fastcall calling convention, since it's similar to thiscall but uses the EDX register for the second argument.
+
+```cpp
+// This only works on clang, due to msvc being a bitch about it
+// or i mean it doesnt like it when you use it outside class/structs
+void __thiscall foo(T* self, A bar, B baz, ...) {
+
+}
+
+// the two below should be the equivalent to the above
+
+// void* since thats the size of a pointer, which is also the size of the EDX register
+void __fastcall foo(T* self, void* edx, A bar, B baz, ...) {
+    
+}
+
+// There's also another option, recently found by pie
+
+// the name of the struct doesnt matter
+struct Hooks {
+    static void __thiscall foo(T* self, A bar, B baz, ...) {
+
+    }
+};
+```
+
+So going back to the example of `PlayLayer::init`, here is how you could do it
+
+```cpp
+bool __fastcall PlayLayer_init(PlayLayer* self, void*, GJGameLevel* level) {
+    // ...
+}
+// or
+struct Hooks {
+    static bool __thiscall PlayLayer_init(PlayLayer* self, GJGameLevel* level) {
+        // ...
+    }
+};
+```
+
+---
+
+Now, time to hook one of gd's functions, for this example lets choose `void MenuLayer::onMoreGames(cocos2d::CCObject*)`. Not only does this function not contain any float arguments, but it's also a cocos2d selector, meaning we don't have to deal with optcall shenanigans. \
+As shown before, with the way MinHook works you must also save a pointer to the [trampoline](https://en.wikipedia.org/wiki/Trampoline_%28computing%29) function. For these you must also deal with the calling convention, but they can be set to `__thiscall` on either compiler.
+
+```cpp
+// the _H suffix is a way of distingushing between the hook and the trampoline
+// you can choose them to be anything you want, as function names don't affect how hooks work
+void (__thiscall* MenuLayer_onMoreGames)(MenuLayer*, cocos2d::CCObject*);
+void __fastcall MenuLayer_onMoreGames_H(MenuLayer* self, void*, cocos2d::CCObject* sender) {
+    // here we are calling the trampoline, executing the code
+    // of the target function, while also being able to run our own code afterwards/before
+    MenuLayer_onMoreGames(self, sender);
+    MessageBoxA(NULL, "MenuLayer::onMoreGames has been called", "info", MB_OK);
+}
+
+DWORD WINAPI myThread(void*) {
+    MH_Initialize();
+
+    MH_CreateHook(
+        reinterpret_cast<void*>(&???), // target
+        reinterpret_cast<void*>(&MenuLayer_onMoreGames_H),
+        reinterpret_cast<void**>(&MenuLayer_onMoreGames)
+    );
+
+    MH_EnableHook(MH_ALL_HOOKS);
+
+    return 0;
+}
+
+// ...
+```
+
+Well, now what do we put in as the target function? idk
