@@ -2,7 +2,7 @@
 
 *(if you notice any mistakes in this document feel free to let me know)*
 
-This assumes you have at least some knowledge of C++. **You should not jump into GD Modding with little to no c++ or programming knowledge**. that is dumb bad idea.
+This assumes you have at least some knowledge of C++. This tutorial will not teach you C++. **You should not jump into GD Modding with little to no c++ or programming knowledge**. that is dumb bad idea.
 You can follow online tutorials such as [learncpp](https://www.learncpp.com/) and others easily found on google on how to learn C++
 
 This tutorial also makes use of CMake, which will be helpful to know about \
@@ -18,7 +18,9 @@ Note that this entire tutorial focuses on modding the game with C++ (mostly focu
 - [Creating a hook](#creating-a-hook)
     - [Calling conventions](#calling-conventions)
     - [Calling conventions in practice](#calling-conventions-in-practice)
-- [Your first Cocos2d-x layer]()
+    - [Function pointers](#function-pointers)
+- [Working with Cocos2d-x](#working-with-cocos2d-x)
+    - [Making your first layer]()
 - [Working with the gd classes]()
 - [Understanding assembly]()
 - [Reverse engineering]()
@@ -398,4 +400,59 @@ DWORD WINAPI myThread(void*) {
 // ...
 ```
 
-Well, now what do we put in as the target function? idk
+Well, now what do we put in as the target function?
+
+## Function Pointers
+
+Like regular pointers, function pointers are just addresses. And those addresses for functions, at least in gd, always stay the same, although are offset by the base address. What this all means is functions will always be located at `base + offset` with the same offset for the same game version.
+
+Take for example `MenuLayer::init`. Its offset for the latest version of the game (2.113 at the moment) on windows is `0x1907B0`, meaning for any copy of the current windows version if you go to `base + 0x1907B0` you will always find the same function. \
+But what is the base address? It's where the [module](https://docs.microsoft.com/en-us/windows/win32/psapi/module-information) gets loaded to in the address space. And due to ASLR this is different every time you run the game. But how do you get it? `GetModuleHandle(NULL)` will give you a handle to the current module, which also happens to be the base address.
+
+See: https://devblogs.microsoft.com/oldnewthing/20040614-00/?p=38903 \
+https://devblogs.microsoft.com/oldnewthing/20141003-00/?p=43923 \
+https://docs.microsoft.com/en-us/cpp/build/reference/dynamicbase-use-address-space-layout-randomization?view=msvc-160 \
+https://docs.microsoft.com/en-us/windows/win32/psapi/module-information
+
+Therefore to get the address of `MenuLayer::init` we can do
+
+```cpp
+// use uintptr_t as its always the size of a pointer
+// but also easy to do arithmetic with, unlike void*
+auto base = reinterpret_cast<uintptr_t>(GetModuleHandle(NULL));
+
+auto address = base + 0x1907B0;
+
+// here we cast the address to a function pointer type
+// making sure to use the proper function signature
+auto pointer = reinterpret_cast<bool(__thiscall*)(MenuLayer*)>(address);
+
+// now we can call MenuLayer::init ourselves
+pointer(someMenuLayer);
+```
+
+But like, how do you find these offsets in the first place? [Reverse engineering](#reverse-engineering). For now we will be relying on already found and publicly available offsets
+
+https://github.com/matcool/re-scripts/blob/main/func_dump.txt
+
+--- 
+
+So, going back to the hook, we can now do this
+
+```cpp
+// ...
+
+auto base = reinterpret_cast<uintptr_t>(GetModuleHandle(NULL));
+
+MH_CreateHook(
+    reinterpret_cast<void*>(base + 0x1919C0), // target
+    reinterpret_cast<void*>(&MenuLayer_onMoreGames_H),
+    reinterpret_cast<void**>(&MenuLayer_onMoreGames)
+);
+
+// ...
+```
+
+And now you should have successfully hooked a gd function! After loading the dll in you should see a message box after clicking on the more games button
+
+# Working with Cocos2d-x
