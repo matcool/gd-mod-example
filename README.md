@@ -33,11 +33,7 @@ cd my-awesome-mod
 ```
 2. Configure (you only need to do this when editing the cmake file, or adding new cpp files)
 ``` bash
-# make sure this matches the visual studio version you have!
-# you can do `cmake -G` to see all the options
-cmake -G "Visual Studio 17 2022" -B build -A win32
-# for 2019:
-cmake -G "Visual Studio 16 2019" -B build -A win32
+cmake -B build -A win32
 ```
 3. Build
 ```bash
